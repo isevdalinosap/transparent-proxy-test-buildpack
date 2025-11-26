@@ -1,0 +1,17 @@
+#!/bin/bash
+# Finalize script for transparent-proxy buildpack
+# This script runs after all supply buildpacks have run
+
+set -e
+
+BUILD_DIR=$1
+CACHE_DIR=$2
+DEPS_DIR=$3
+DEPS_IDX=$4
+
+echo "-----> Transparent Proxy Finalize"
+
+# The transparent proxy binary is already built and placed in DEPS_DIR by the supply script
+# This script can be used for any final setup if needed
+
+echo "-----> Transparent proxy finalize complete"

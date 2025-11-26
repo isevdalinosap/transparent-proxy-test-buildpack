@@ -1,0 +1,55 @@
+#!/bin/bash
+# Compile script for transparent-proxy buildpack
+# Used when this buildpack is the final/only buildpack
+
+set -e
+
+BUILD_DIR=$1
+CACHE_DIR=$2
+ENV_DIR=$3
+BUILDPACK_DIR=$(cd "$(dirname "$0")/.." && pwd)
+
+echo "-----> Transparent Proxy Compile Buildpack"
+
+# Use the transparent-proxy source code from the buildpack itself
+PROXY_SOURCE_DIR="$BUILDPACK_DIR/transparent-proxy"
+
+if [ ! -d "$PROXY_SOURCE_DIR" ]; then
+  echo "ERROR: transparent-proxy source code not found in buildpack"
+  exit 1
+fi
+
+echo "-----> Using transparent proxy source from buildpack"
+
+# Install Go if not present
+GO_VERSION="1.21.5"
+GO_URL="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+
+if [ ! -d "$CACHE_DIR/go" ]; then
+  echo "-----> Downloading Go ${GO_VERSION}"
+  mkdir -p "$CACHE_DIR"
+  curl -s -L "$GO_URL" | tar xz -C "$CACHE_DIR"
+fi
+
+# Set up Go environment
+export GOROOT="$CACHE_DIR/go"
+export PATH="$GOROOT/bin:$PATH"
+export GOPATH="$CACHE_DIR/go-path"
+
+echo "-----> Building transparent proxy"
+cd "$PROXY_SOURCE_DIR"
+go build -o "$BUILD_DIR/transparent-proxy-bin" main.go
+
+chmod +x "$BUILD_DIR/transparent-proxy-bin"
+
+# Create .profile.d script to start the transparent proxy automatically
+mkdir -p "$BUILD_DIR/.profile.d"
+cat > "$BUILD_DIR/.profile.d/transparent-proxy.sh" <<'PROFILE'
+# Start transparent proxy in the background
+echo "Starting transparent proxy..."
+./transparent-proxy-bin &
+PROXY_PID=$!
+echo "Transparent proxy started with PID: $PROXY_PID on port 8081"
+PROFILE
+
+echo "-----> Transparent proxy build complete"

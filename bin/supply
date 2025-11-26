@@ -1,0 +1,64 @@
+#!/bin/bash
+# Supply script for transparent-proxy buildpack
+# This script is used when the buildpack is part of a multi-buildpack chain
+
+set -e
+
+BUILD_DIR=$1
+CACHE_DIR=$2
+DEPS_DIR=$3
+DEPS_IDX=$4
+BUILDPACK_DIR=$(cd "$(dirname "$0")/.." && pwd)
+
+echo "-----> Transparent Proxy Supply Buildpack"
+
+# Use the transparent-proxy source code from the buildpack itself
+PROXY_SOURCE_DIR="$BUILDPACK_DIR/transparent-proxy"
+
+if [ ! -d "$PROXY_SOURCE_DIR" ]; then
+  echo "ERROR: transparent-proxy source code not found in buildpack"
+  exit 1
+fi
+
+echo "-----> Using transparent proxy source from buildpack"
+
+# Install Go if not present
+GO_VERSION="1.21.5"
+GO_URL="https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+
+if [ ! -d "$CACHE_DIR/go" ]; then
+  echo "-----> Downloading Go ${GO_VERSION}"
+  mkdir -p "$CACHE_DIR"
+  curl -s -L "$GO_URL" | tar xz -C "$CACHE_DIR"
+fi
+
+# Set up Go environment
+export GOROOT="$CACHE_DIR/go"
+export PATH="$GOROOT/bin:$PATH"
+export GOPATH="$CACHE_DIR/go-path"
+
+echo "-----> Building transparent proxy"
+mkdir -p "$DEPS_DIR/$DEPS_IDX/bin"
+cd "$PROXY_SOURCE_DIR"
+go build -o "$DEPS_DIR/$DEPS_IDX/bin/transparent-proxy-bin" main.go
+
+# Create profile.d script to start the transparent proxy automatically
+mkdir -p "$DEPS_DIR/$DEPS_IDX/profile.d"
+cat > "$DEPS_DIR/$DEPS_IDX/profile.d/transparent-proxy.sh" <<'PROFILE'
+# Add binary to PATH
+export PATH=$PATH:$DEPS_DIR/@@DEPS_IDX@@/bin
+
+# Start transparent proxy in the background
+echo "Starting transparent proxy..."
+$DEPS_DIR/@@DEPS_IDX@@/bin/transparent-proxy-bin &
+PROXY_PID=$!
+echo "Transparent proxy started with PID: $PROXY_PID on port 8081"
+PROFILE
+
+# Replace @@DEPS_IDX@@ with actual index
+sed -i.bak "s|@@DEPS_IDX@@|$DEPS_IDX|g" "$DEPS_DIR/$DEPS_IDX/profile.d/transparent-proxy.sh"
+rm "$DEPS_DIR/$DEPS_IDX/profile.d/transparent-proxy.sh.bak"
+
+chmod +x "$DEPS_DIR/$DEPS_IDX/bin/transparent-proxy-bin"
+
+echo "-----> Transparent proxy supply complete"

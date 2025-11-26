@@ -1,0 +1,14 @@
+---
+applications:
+- name: my-app-with-proxy
+  memory: 512M
+  buildpacks:
+    # Transparent proxy buildpack FIRST (runs automatically as sidecar)
+    - https://github.com/isevdalinosap/transparent-proxy-test-buildpack.git
+    # Your main application buildpack (e.g., Node.js, Python, Java)
+    - nodejs_buildpack
+  env:
+    TRANSPARENT_PROXY_PORT: 8081
+  # No additional configuration needed!
+  # The transparent proxy will automatically run in the background
+  # Your main buildpack controls the primary process

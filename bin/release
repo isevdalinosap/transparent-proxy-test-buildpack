@@ -1,0 +1,9 @@
+#!/bin/bash
+# Release script for transparent-proxy buildpack
+# This buildpack works as a supply buildpack and doesn't override the main process
+
+cat <<EOF
+---
+# No default_process_types defined - this allows other buildpacks to set the main process
+# The transparent proxy will be started via the start-transparent-proxy.sh wrapper script
+EOF

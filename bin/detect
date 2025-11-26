@@ -1,0 +1,9 @@
+#!/bin/bash
+# Detect script for transparent-proxy buildpack
+# This buildpack always succeeds to work as a supply buildpack alongside other buildpacks
+
+BUILD_DIR=$1
+
+# Always succeed - this buildpack will always be used when included in the buildpack list
+echo "transparent-proxy-buildpack"
+exit 0
